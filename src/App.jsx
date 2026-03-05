@@ -497,32 +497,32 @@ const EventDetailsPage = ({ event, onBack }) => (
 
                         <div className="p-8 border border-slate-100 rounded-3xl">
                             <h3 className="font-bold text-slate-900 mb-6 uppercase text-xs tracking-widest">Student Coordinators</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
                                 <div>
-                                    <div className="flex items-baseline gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <p className="text-sm font-bold text-slate-900">B.RAAHUL</p>
-                                        <span className="text-[10px] text-accent italic whitespace-nowrap">(3rd yr)</span>
+                                        <span className="text-[10px] text-accent italic">(3rd yr)</span>
                                     </div>
                                     <p className="text-xs text-slate-500 font-medium tracking-wide mt-1">9121438920</p>
                                 </div>
                                 <div>
-                                    <div className="flex items-baseline gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <p className="text-sm font-bold text-slate-900">A.HARSHITHA</p>
-                                        <span className="text-[10px] text-accent italic whitespace-nowrap">(3rd yr)</span>
+                                        <span className="text-[10px] text-accent italic">(3rd yr)</span>
                                     </div>
                                     <p className="text-xs text-slate-500 font-medium tracking-wide mt-1">9346168608</p>
                                 </div>
                                 <div>
-                                    <div className="flex items-baseline gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <p className="text-sm font-bold text-slate-900">B.VAISHNAVI</p>
-                                        <span className="text-[10px] text-accent italic whitespace-nowrap">(2nd yr)</span>
+                                        <span className="text-[10px] text-accent italic">(2nd yr)</span>
                                     </div>
                                     <p className="text-xs text-slate-500 font-medium tracking-wide mt-1">8142960060</p>
                                 </div>
                                 <div>
-                                    <div className="flex items-baseline gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <p className="text-sm font-bold text-slate-900">N.Nithin</p>
-                                        <span className="text-[10px] text-accent italic whitespace-nowrap">(2nd yr)</span>
+                                        <span className="text-[10px] text-accent italic">(2nd yr)</span>
                                     </div>
                                     <p className="text-xs text-slate-500 font-medium tracking-wide mt-1">9618154410</p>
                                 </div>
