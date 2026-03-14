@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoImg from '../logo.png';
 import challengeImg from '../challenge.png';
-import namtechImg from '../namtech.png';
 import footerImg from '../footer.png';
 import {
     Github,
@@ -38,8 +37,6 @@ const EVENTS = [
         date: "March 13, 2026",
         description: "3 Battles. One Champion. Team Size: 3. Prizes: Win exciting rewards. Registration Fee: ₹350.",
         type: "Competition",
-        partnerText: "IN PARTNERSHIP WITH :",
-        partnerLogo: namtechImg,
         poster: challengeImg,
         highlights: [
             "3-months internship will be offered to the winners.",
