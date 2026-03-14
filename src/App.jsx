@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Github,
@@ -11,7 +11,11 @@ import {
     ExternalLink,
     Menu,
     X,
-    MapPin
+    MapPin,
+    Trophy,
+    Upload,
+    Medal,
+    RefreshCw
 } from 'lucide-react';
 
 // --- Constants ---
@@ -32,6 +36,7 @@ const EVENTS = [
         type: "Competition",
         partnerText: "IN PARTNERSHIP WITH :",
         partnerLogo: "/namtech.png",
+        poster: "/challenge.png",
         highlights: [
             "3-months internship will be offered to the winners.",
             "Expert-led sessions and hands-on participation.",
@@ -375,7 +380,7 @@ const EventsPage = ({ onEventClick }) => (
     </div>
 );
 
-const EventDetailsPage = ({ event, onBack }) => (
+const EventDetailsPage = ({ event, onBack, onLeaderboard }) => (
     <div className="pt-32 pb-24">
         <section className="section-padding max-w-5xl mx-auto">
             <motion.button
@@ -404,6 +409,21 @@ const EventDetailsPage = ({ event, onBack }) => (
                     >
                         {event.title}
                     </motion.h1>
+
+                    {event.poster && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.15 }}
+                            className="mb-12 rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-lg"
+                        >
+                            <img
+                                src={event.poster}
+                                alt={`${event.title} Poster`}
+                                className="w-full h-auto object-cover"
+                            />
+                        </motion.div>
+                    )}
 
                     {event.partnerLogo && (
                         <motion.div
@@ -559,14 +579,187 @@ const EventDetailsPage = ({ event, onBack }) => (
                             </div>
                         </div>
                         <button className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                            Register Seat <ExternalLink size={18} />
+                            Register Now <ExternalLink size={18} />
                         </button>
+                        {event.title === "Coding Challenge" && (
+                            <button
+                                onClick={onLeaderboard}
+                                className="mt-4 w-full bg-amber-500 text-white py-4 rounded-2xl font-bold hover:bg-amber-400 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Trophy size={18} /> Leaderboard
+                            </button>
+                        )}
                     </motion.div>
                 </div>
             </div>
         </section>
     </div>
 );
+
+const LEADERBOARD_KEY = 'codingclub_leaderboard';
+
+const LeaderboardPage = ({ onBack }) => {
+    const [rows, setRows] = useState(() => {
+        try {
+            const saved = localStorage.getItem(LEADERBOARD_KEY);
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
+    const [headers, setHeaders] = useState(() => {
+        try {
+            const saved = localStorage.getItem(LEADERBOARD_KEY + '_headers');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
+    const [uploading, setUploading] = useState(false);
+    const fileRef = useRef();
+
+    const handleFile = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const XL = window.XLSX;
+                const wb = XL.read(evt.target.result, { type: 'binary' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const data = XL.utils.sheet_to_json(ws, { header: 1 });
+                if (data.length < 2) { setUploading(false); return; }
+                const hdrs = data[0].map(String);
+                const body = data.slice(1).filter(r => r.some(c => c !== undefined && c !== ''));
+                localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(body));
+                localStorage.setItem(LEADERBOARD_KEY + '_headers', JSON.stringify(hdrs));
+                setHeaders(hdrs);
+                setRows(body);
+            } catch (err) { console.error(err); }
+            setUploading(false);
+        };
+        reader.readAsBinaryString(file);
+        e.target.value = '';
+    };
+
+    const handleClear = () => {
+        localStorage.removeItem(LEADERBOARD_KEY);
+        localStorage.removeItem(LEADERBOARD_KEY + '_headers');
+        setRows([]);
+        setHeaders([]);
+    };
+
+    const medalColor = (i) => {
+        if (i === 0) return 'text-yellow-400';
+        if (i === 1) return 'text-slate-400';
+        if (i === 2) return 'text-amber-600';
+        return 'text-slate-300';
+    };
+
+    return (
+        <div className="pt-32 pb-24">
+            <section className="section-padding max-w-5xl mx-auto">
+                <motion.button
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    onClick={onBack}
+                    className="flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors font-bold text-xs uppercase tracking-widest mb-12"
+                >
+                    <ArrowRight size={16} className="rotate-180" /> Back to Event
+                </motion.button>
+
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
+                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-4">
+                        <div>
+                            <span className="text-[10px] font-black tracking-[0.2em] text-amber-500 uppercase bg-amber-50 px-4 py-1.5 rounded-full">Live Rankings</span>
+                            <h1 className="text-4xl md:text-6xl font-black text-slate-900 mt-6 mb-2 tracking-tight flex items-center gap-4">
+                                <Trophy className="text-amber-400" size={48} /> Leaderboard
+                            </h1>
+                            <p className="text-slate-400 text-sm">Coding Challenge — Official standings</p>
+                        </div>
+                        <div className="flex gap-3 flex-wrap">
+                            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFile} />
+                            <motion.button
+                                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                                onClick={() => fileRef.current.click()}
+                                disabled={uploading}
+                                className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-slate-700 transition-all disabled:opacity-60"
+                            >
+                                <Upload size={16} />
+                                {uploading ? 'Reading...' : rows.length ? 'Update Excel' : 'Upload Excel'}
+                            </motion.button>
+                            {rows.length > 0 && (
+                                <motion.button
+                                    whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                                    onClick={handleClear}
+                                    className="flex items-center gap-2 border border-slate-200 text-slate-500 px-5 py-3 rounded-2xl font-bold text-sm hover:border-red-300 hover:text-red-400 transition-all"
+                                >
+                                    <RefreshCw size={16} /> Clear
+                                </motion.button>
+                            )}
+                        </div>
+                    </div>
+                    <div className="h-1 w-20 bg-amber-400 rounded-full" />
+                </motion.div>
+
+                {rows.length === 0 ? (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="glass-card p-16 flex flex-col items-center justify-center text-center"
+                    >
+                        <Trophy size={64} className="text-amber-200 mb-6" />
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-sm mb-2">No data yet</p>
+                        <p className="text-slate-300 text-xs">Upload an Excel sheet (.xlsx / .xls / .csv) to populate the leaderboard.</p>
+                    </motion.div>
+                ) : (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                        className="overflow-x-auto rounded-3xl border border-slate-100 shadow-sm"
+                    >
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="bg-slate-900 text-white">
+                                    <th className="px-6 py-5 text-left font-black uppercase tracking-widest text-[10px] w-16">Rank</th>
+                                    {headers.map((h, i) => (
+                                        <th key={i} className="px-6 py-5 text-left font-black uppercase tracking-widest text-[10px]">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rows.map((row, i) => (
+                                    <motion.tr
+                                        key={i}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: i * 0.04 }}
+                                        className={`border-b border-slate-50 transition-colors ${i === 0 ? 'bg-amber-50' :
+                                            i === 1 ? 'bg-slate-50/80' :
+                                                i === 2 ? 'bg-orange-50/50' :
+                                                    'bg-white hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        <td className="px-6 py-4">
+                                            {i < 3
+                                                ? <Medal size={20} className={medalColor(i)} />
+                                                : <span className="font-bold text-slate-300 text-xs">{i + 1}</span>
+                                            }
+                                        </td>
+                                        {headers.map((_, j) => (
+                                            <td key={j} className={`px-6 py-4 ${j === 0 ? 'font-bold text-slate-900' : 'text-slate-500'
+                                                }`}>
+                                                {row[j] !== undefined ? String(row[j]) : '—'}
+                                            </td>
+                                        ))}
+                                    </motion.tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </motion.div>
+                )}
+
+                <p className="text-center text-[10px] text-slate-300 uppercase tracking-widest mt-8 font-bold">
+                    {rows.length > 0 && `${rows.length} team${rows.length !== 1 ? 's' : ''} ranked`}
+                </p>
+            </section>
+        </div>
+    );
+};
 
 export default function App() {
     const [currentPage, setCurrentPage] = useState('home');
@@ -582,8 +775,14 @@ export default function App() {
         setCurrentPage('event-details');
     };
 
+    const navigateToLeaderboard = () => {
+        setCurrentPage('leaderboard');
+    };
+
     const handleBack = () => {
-        if (currentPage === 'event-details') {
+        if (currentPage === 'leaderboard') {
+            setCurrentPage('event-details');
+        } else if (currentPage === 'event-details') {
             setCurrentPage('events');
             setSelectedEvent(null);
         }
@@ -601,7 +800,10 @@ export default function App() {
                     <EventsPage onEventClick={navigateToEvent} />
                 )}
                 {currentPage === 'event-details' && (
-                    <EventDetailsPage event={selectedEvent} onBack={handleBack} />
+                    <EventDetailsPage event={selectedEvent} onBack={handleBack} onLeaderboard={navigateToLeaderboard} />
+                )}
+                {currentPage === 'leaderboard' && (
+                    <LeaderboardPage onBack={handleBack} />
                 )}
             </main>
 
