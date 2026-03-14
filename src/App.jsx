@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoImg from '../logo.png';
-import challengeImg from '../challenge.png';
+import challengeImg from '../challenge1.png';
 import footerImg from '../footer.png';
 import {
     Github,
