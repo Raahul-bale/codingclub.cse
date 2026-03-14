@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import logoImg from '../logo.png';
+import challengeImg from '../challenge.png';
+import namtechImg from '../namtech.png';
+import footerImg from '../footer.png';
 import {
     Github,
     ChevronRight,
@@ -35,8 +39,8 @@ const EVENTS = [
         description: "3 Battles. One Champion. Team Size: 3. Prizes: Win exciting rewards. Registration Fee: ₹350.",
         type: "Competition",
         partnerText: "IN PARTNERSHIP WITH :",
-        partnerLogo: "/namtech.png",
-        poster: "/challenge.png",
+        partnerLogo: namtechImg,
+        poster: challengeImg,
         highlights: [
             "3-months internship will be offered to the winners.",
             "Expert-led sessions and hands-on participation.",
@@ -91,7 +95,7 @@ const Navbar = ({ onNavigate, currentPage }) => {
                     className="flex items-center gap-1.5 cursor-pointer"
                     onClick={() => onNavigate('home')}
                 >
-                    <img src="/logo.png" alt={CLUBS_NAME} className="h-10 w-auto" />
+                    <img src={logoImg} alt={CLUBS_NAME} className="h-10 w-auto" />
                     <span className="text-xl font-bold tracking-tight text-slate-900 hidden sm:inline-block">
                         {CLUBS_NAME}
                     </span>
@@ -233,7 +237,7 @@ const Footer = ({ onNavigate }) => {
                 <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
                     <div className="lg:col-span-2">
                         <div className="flex items-center gap-3 mb-6 cursor-pointer" onClick={() => onNavigate('home')}>
-                            <img src="/logo.png" alt={CLUBS_NAME} className="h-12 w-auto" />
+                            <img src={logoImg} alt={CLUBS_NAME} className="h-12 w-auto" />
                             <div className="text-2xl font-black text-slate-900 italic tracking-tight">
                                 {CLUBS_NAME}
                             </div>
@@ -299,7 +303,7 @@ const Footer = ({ onNavigate }) => {
                     style={{ zIndex: 0 }}
                 >
                     <img
-                        src="/footer.png"
+                        src={footerImg}
                         alt="University Logo"
                         className="max-w-full h-full object-contain"
                     />
