@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import logoImg from '../logo.png';
 import challengeImg from '../challenge1.png';
 import footerImg from '../footer.png';
+import defaultLeaderboard from './leaderboardData.json';
 import {
     Github,
     ChevronRight,
@@ -18,7 +19,8 @@ import {
     Trophy,
     Upload,
     Medal,
-    RefreshCw
+    RefreshCw,
+    Search
 } from 'lucide-react';
 
 // --- Constants ---
@@ -599,53 +601,91 @@ const EventDetailsPage = ({ event, onBack, onLeaderboard }) => (
 
 const LEADERBOARD_KEY = 'codingclub_leaderboard';
 
+const sortLeaderboardData = (hdrs, body) => {
+    const scoreIdx = hdrs.findIndex(h => h.trim() === 'NeoPAT_MRU_Hackathon_Round 01 student score');
+    const durationIdx = hdrs.findIndex(h => h.trim() === 'Test Duration');
+    const submitIdx = hdrs.findIndex(h => h.trim() === 'Submit Time');
+
+    const parseDuration = (durStr) => {
+        if (!durStr) return Infinity;
+        const parts = String(durStr).split(':');
+        if (parts.length !== 3) return Infinity;
+        return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+    };
+
+    const parseDate = (dateStr) => {
+        if (!dateStr) return Infinity;
+        const parts = String(dateStr).split(' ');
+        if (parts.length !== 2) return Infinity;
+        const ds = parts[0].split('/');
+        if (ds.length !== 3) return Infinity;
+        const iso = `${ds[2]}-${ds[1]}-${ds[0]}T${parts[1]}`;
+        const time = new Date(iso).getTime();
+        return isNaN(time) ? Infinity : time;
+    };
+
+    return [...body].sort((a, b) => {
+        if (scoreIdx !== -1) {
+            const scoreA = parseFloat(a[scoreIdx]) || 0;
+            const scoreB = parseFloat(b[scoreIdx]) || 0;
+            if (scoreA !== scoreB) return scoreB - scoreA;
+        }
+        if (durationIdx !== -1) {
+            const durA = parseDuration(a[durationIdx]);
+            const durB = parseDuration(b[durationIdx]);
+            if (durA !== durB) return durA - durB;
+        }
+        if (submitIdx !== -1) {
+            const timeA = parseDate(a[submitIdx]);
+            const timeB = parseDate(b[submitIdx]);
+            if (timeA !== timeB) return timeA - timeB;
+        }
+        return 0;
+    });
+};
+
 const LeaderboardPage = ({ onBack }) => {
     const [rows, setRows] = useState(() => {
-        try {
-            const saved = localStorage.getItem(LEADERBOARD_KEY);
-            return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
+        if (defaultLeaderboard && defaultLeaderboard.rows && defaultLeaderboard.headers) {
+            let sorted = sortLeaderboardData(defaultLeaderboard.headers, defaultLeaderboard.rows);
+
+            const nameIdx = defaultLeaderboard.headers.findIndex(h => h && h.trim() === 'Name');
+            const emailIdx = defaultLeaderboard.headers.findIndex(h => h && h.trim() === 'Email');
+            const scoreIdx = defaultLeaderboard.headers.findIndex(h => h && h.trim() === 'NeoPAT_MRU_Hackathon_Round 01 student score');
+            const durationIdx = defaultLeaderboard.headers.findIndex(h => h && h.trim() === 'Test Duration');
+
+            if (nameIdx !== -1 && emailIdx !== -1) {
+                return sorted.map(row => [
+                    row[nameIdx],
+                    row[emailIdx],
+                    scoreIdx !== -1 ? row[scoreIdx] : '—',
+                    durationIdx !== -1 ? row[durationIdx] : '—'
+                ]);
+            }
+            return sorted;
+        }
+        return [];
     });
+
     const [headers, setHeaders] = useState(() => {
-        try {
-            const saved = localStorage.getItem(LEADERBOARD_KEY + '_headers');
-            return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
+        if (defaultLeaderboard && defaultLeaderboard.headers) {
+            const nameIdx = defaultLeaderboard.headers.findIndex(h => h && h.trim() === 'Name');
+            const emailIdx = defaultLeaderboard.headers.findIndex(h => h && h.trim() === 'Email');
+
+            if (nameIdx !== -1 && emailIdx !== -1) {
+                return ['Name', 'Registration Mail', 'Score', 'Duration'];
+            }
+            return defaultLeaderboard.headers;
+        }
+        return [];
     });
-    const [uploading, setUploading] = useState(false);
-    const fileRef = useRef();
 
-    const handleFile = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        setUploading(true);
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            try {
-                const XL = window.XLSX;
-                const wb = XL.read(evt.target.result, { type: 'binary' });
-                const ws = wb.Sheets[wb.SheetNames[0]];
-                const data = XL.utils.sheet_to_json(ws, { header: 1 });
-                if (data.length < 2) { setUploading(false); return; }
-                const hdrs = data[0].map(String);
-                const body = data.slice(1).filter(r => r.some(c => c !== undefined && c !== ''));
-                localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(body));
-                localStorage.setItem(LEADERBOARD_KEY + '_headers', JSON.stringify(hdrs));
-                setHeaders(hdrs);
-                setRows(body);
-            } catch (err) { console.error(err); }
-            setUploading(false);
-        };
-        reader.readAsBinaryString(file);
-        e.target.value = '';
-    };
+    const [searchQuery, setSearchQuery] = useState('');
 
-    const handleClear = () => {
-        localStorage.removeItem(LEADERBOARD_KEY);
-        localStorage.removeItem(LEADERBOARD_KEY + '_headers');
-        setRows([]);
-        setHeaders([]);
-    };
+    const filteredRows = rows.filter(row => {
+        if (!searchQuery) return true;
+        return row.some(cell => String(cell).toLowerCase().includes(searchQuery.toLowerCase()));
+    });
 
     const medalColor = (i) => {
         if (i === 0) return 'text-yellow-400';
@@ -667,34 +707,26 @@ const LeaderboardPage = ({ onBack }) => {
                 </motion.button>
 
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
-                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-4">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                         <div>
                             <span className="text-[10px] font-black tracking-[0.2em] text-amber-500 uppercase bg-amber-50 px-4 py-1.5 rounded-full">Live Rankings</span>
-                            <h1 className="text-4xl md:text-6xl font-black text-slate-900 mt-6 mb-2 tracking-tight flex items-center gap-4">
-                                <Trophy className="text-amber-400" size={48} /> Leaderboard
+                            <h1 className="text-4xl md:text-5xl font-black text-slate-900 mt-6 mb-2 tracking-tight flex items-center gap-4">
+                                <Trophy className="text-amber-400" size={40} /> Leaderboard
                             </h1>
                             <p className="text-slate-400 text-sm">Coding Challenge — Official standings</p>
                         </div>
-                        <div className="flex gap-3 flex-wrap">
-                            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFile} />
-                            <motion.button
-                                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                                onClick={() => fileRef.current.click()}
-                                disabled={uploading}
-                                className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-slate-700 transition-all disabled:opacity-60"
-                            >
-                                <Upload size={16} />
-                                {uploading ? 'Reading...' : rows.length ? 'Update Excel' : 'Upload Excel'}
-                            </motion.button>
-                            {rows.length > 0 && (
-                                <motion.button
-                                    whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                                    onClick={handleClear}
-                                    className="flex items-center gap-2 border border-slate-200 text-slate-500 px-5 py-3 rounded-2xl font-bold text-sm hover:border-red-300 hover:text-red-400 transition-all"
-                                >
-                                    <RefreshCw size={16} /> Clear
-                                </motion.button>
-                            )}
+
+                        <div className="relative w-full md:w-72">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <Search size={18} className="text-slate-400" />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search by name or mail..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-2xl focus:ring-2 focus:ring-amber-400 focus:border-amber-400 block pl-11 p-3.5 transition-all shadow-sm"
+                            />
                         </div>
                     </div>
                     <div className="h-1 w-20 bg-amber-400 rounded-full" />
@@ -707,7 +739,7 @@ const LeaderboardPage = ({ onBack }) => {
                     >
                         <Trophy size={64} className="text-amber-200 mb-6" />
                         <p className="text-slate-400 font-bold uppercase tracking-widest text-sm mb-2">No data yet</p>
-                        <p className="text-slate-300 text-xs">Upload an Excel sheet (.xlsx / .xls / .csv) to populate the leaderboard.</p>
+                        <p className="text-slate-300 text-xs">The leaderboard will be populated soon.</p>
                     </motion.div>
                 ) : (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
@@ -723,39 +755,47 @@ const LeaderboardPage = ({ onBack }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.map((row, i) => (
-                                    <motion.tr
-                                        key={i}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.04 }}
-                                        className={`border-b border-slate-50 transition-colors ${i === 0 ? 'bg-amber-50' :
-                                            i === 1 ? 'bg-slate-50/80' :
-                                                i === 2 ? 'bg-orange-50/50' :
-                                                    'bg-white hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        <td className="px-6 py-4">
-                                            {i < 3
-                                                ? <Medal size={20} className={medalColor(i)} />
-                                                : <span className="font-bold text-slate-300 text-xs">{i + 1}</span>
-                                            }
+                                {filteredRows.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={headers.length + 1} className="px-6 py-12 text-center text-slate-400">
+                                            No participants found matching "{searchQuery}"
                                         </td>
-                                        {headers.map((_, j) => (
-                                            <td key={j} className={`px-6 py-4 ${j === 0 ? 'font-bold text-slate-900' : 'text-slate-500'
-                                                }`}>
-                                                {row[j] !== undefined ? String(row[j]) : '—'}
+                                    </tr>
+                                ) : (
+                                    filteredRows.map((row, i) => (
+                                        <motion.tr
+                                            key={i}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: Math.min(i * 0.02, 0.5) }}
+                                            className={`border-b border-slate-50 transition-colors ${i === 0 ? 'bg-amber-50' :
+                                                i === 1 ? 'bg-slate-50/80' :
+                                                    i === 2 ? 'bg-orange-50/50' :
+                                                        'bg-white hover:bg-slate-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-4">
+                                                {i < 3
+                                                    ? <Medal size={20} className={medalColor(i)} />
+                                                    : <span className="font-bold text-slate-300 text-xs">{i + 1}</span>
+                                                }
                                             </td>
-                                        ))}
-                                    </motion.tr>
-                                ))}
+                                            {headers.map((_, j) => (
+                                                <td key={j} className={`px-6 py-4 ${j === 0 ? 'font-bold text-slate-900' : 'text-slate-500 max-w-[200px] truncate'
+                                                    }`}>
+                                                    {row[j] !== undefined ? String(row[j]) : '—'}
+                                                </td>
+                                            ))}
+                                        </motion.tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </motion.div>
                 )}
 
                 <p className="text-center text-[10px] text-slate-300 uppercase tracking-widest mt-8 font-bold">
-                    {rows.length > 0 && `${rows.length} team${rows.length !== 1 ? 's' : ''} ranked`}
+                    {filteredRows.length > 0 && `Showing ${filteredRows.length} result${filteredRows.length !== 1 ? 's' : ''}`}
                 </p>
             </section>
         </div>
