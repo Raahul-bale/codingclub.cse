@@ -383,6 +383,58 @@ const EventsPage = ({ onEventClick }) => (
     </div>
 );
 
+const CountdownTimer = ({ initialSeconds }) => {
+    const defaultSecs = initialSeconds;
+    const [timeLeft, setTimeLeft] = useState(defaultSecs);
+
+    useEffect(() => {
+        let savedEndTime = localStorage.getItem('coding_challenge_timer_end_v2');
+        if (!savedEndTime) {
+            savedEndTime = (Date.now() + defaultSecs * 1000).toString();
+            localStorage.setItem('coding_challenge_timer_end_v2', savedEndTime);
+        }
+
+        const endTime = parseInt(savedEndTime, 10);
+
+        const updateTimer = () => {
+            const now = Date.now();
+            const remain = Math.max(0, Math.floor((endTime - now) / 1000));
+            setTimeLeft(remain);
+        };
+
+        updateTimer();
+        const timerId = setInterval(updateTimer, 1000);
+        return () => clearInterval(timerId);
+    }, [defaultSecs]);
+
+    const formatTime = (seconds) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18 }}
+            className="mb-12 bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 text-center flex flex-col items-center justify-center shadow-lg relative overflow-hidden"
+        >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
+
+            <p className="text-amber-400 font-black tracking-[0.2em] uppercase text-xs mb-4 z-10 relative">Final Round Ends In</p>
+            <div className="font-mono text-5xl md:text-7xl font-black text-white tracking-widest z-10 relative">
+                {formatTime(timeLeft)}
+            </div>
+            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mt-4 z-10 relative flex gap-8 md:gap-[4.5rem]">
+                <span>Hours</span><span>Minutes</span><span>Seconds</span>
+            </p>
+        </motion.div>
+    );
+};
+
 const EventDetailsPage = ({ event, onBack, onLeaderboard }) => (
     <div className="pt-32 pb-24">
         <section className="section-padding max-w-5xl mx-auto">
@@ -426,6 +478,10 @@ const EventDetailsPage = ({ event, onBack, onLeaderboard }) => (
                                 className="w-full h-auto object-cover"
                             />
                         </motion.div>
+                    )}
+
+                    {event.title === "Coding Challenge" && (
+                        <CountdownTimer initialSeconds={9600} />
                     )}
 
                     {event.partnerLogo && (
